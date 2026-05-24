@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptCraft — AI Design Prompt Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080f;
+    --surface: rgba(255,255,255,0.04);
+    --surface2: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.09);
+    --border2: rgba(255,255,255,0.18);
+    --text: #f0eeff;
+    --muted: #8b82a8;
+    --dim: #4e4868;
+    --violet: #7c3aed;
+    --violet2: #a78bfa;
+    --pink: #ec4899;
+    --cyan: #06b6d4;
+    --amber: #f59e0b;
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── BACKGROUND ─── */
+  .canvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.28;
+    animation: float 16s ease-in-out infinite alternate;
+  }
+  .o1{width:500px;height:500px;background:#7c3aed;top:-120px;left:-100px;animation-delay:0s;}
+  .o2{width:400px;height:400px;background:#ec4899;top:25%;right:-80px;animation-delay:-4s;}
+  .o3{width:350px;height:350px;background:#06b6d4;bottom:5%;left:15%;animation-delay:-8s;}
+  .o4{width:280px;height:280px;background:#f59e0b;bottom:-60px;right:20%;animation-delay:-12s;}
+  @keyframes float {
+    from{transform:translate(0,0) scale(1);}
+    to{transform:translate(25px,-18px) scale(1.1);}
+  }
+  .noise {
+    position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.035;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* ─── LAYOUT ─── */
+  .wrap { position:relative;z-index:2; max-width:1100px; margin:0 auto; padding:0 24px; }
+
+  /* ─── HEADER / NAV ─── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(24px);
+    background: rgba(7,8,15,0.7);
+    border-bottom: 1px solid var(--border);
+  }
+  nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 0; max-width:1100px; margin:0 auto; padding-left:24px; padding-right:24px;
+  }
+  .logo {
+    font-family:'Syne',sans-serif; font-size:22px; font-weight:900; letter-spacing:-0.03em;
+    background: linear-gradient(135deg,#c4b5fd,#ec4899);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    text-decoration:none;
+  }
+  .logo span { color:#f59e0b; -webkit-text-fill-color:#f59e0b; }
+  .nav-links { display:flex; align-items:center; gap:8px; }
+  .nav-link {
+    padding:8px 16px; font-size:14px; color:var(--muted); border-radius:999px;
+    cursor:pointer; transition:all .2s; border:none; background:none; font-family:inherit;
+  }
+  .nav-link:hover { color:var(--text); background:var(--surface); }
+  .btn-pro {
+    padding:9px 20px; font-size:14px; font-weight:500; border-radius:999px; cursor:pointer;
+    background: linear-gradient(135deg,#7c3aed,#ec4899);
+    border:none; color:#fff; font-family:inherit; transition:all .2s;
+    box-shadow: 0 0 20px rgba(124,58,237,0.3);
+  }
+  .btn-pro:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(124,58,237,0.4); }
+
+  /* ─── HERO ─── */
+  .hero {
+    text-align:center; padding:88px 0 56px;
+    animation: riseIn 0.7s ease both;
+  }
+  @keyframes riseIn {
+    from{opacity:0;transform:translateY(32px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .badge-row { display:flex; justify-content:center; gap:10px; margin-bottom:28px; flex-wrap:wrap; }
+  .badge {
+    display:inline-flex; align-items:center; gap:7px;
+    background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.4);
+    border-radius:999px; padding:6px 16px; font-size:13px; color:var(--violet2);
+    letter-spacing:0.04em;
+  }
+  .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--violet2);animation:blink 2s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
+  .badge-new {
+    background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4);
+    color:#fbbf24;
+  }
+  h1 {
+    font-family:'Syne',sans-serif; font-size:clamp(2.4rem,5.5vw,4.2rem);
+    font-weight:900; line-height:1.05; letter-spacing:-0.03em;
+    background: linear-gradient(140deg, #f0eeff 0%, #c4b5fd 30%, #ec4899 65%, #fbbf24 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    margin-bottom:22px;
+  }
+  .hero-sub {
+    font-size:18px; font-weight:300; color:var(--muted);
+    max-width:560px; margin:0 auto 48px; line-height:1.75;
+  }
+  .hero-stats {
+    display:flex; justify-content:center; gap:40px; flex-wrap:wrap;
+  }
+  .hstat { text-align:center; }
+  .hstat-num {
+    font-family:'Syne',sans-serif; font-size:32px; font-weight:800;
+    background:linear-gradient(135deg,#c4b5fd,#ec4899);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    display:block;
+  }
+  .hstat-label { font-size:12px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; }
+
+  /* ─── MAIN GRID ─── */
+  .main-grid {
+    display:grid; grid-template-columns:1fr 340px; gap:24px; margin:56px 0;
+  }
+  @media(max-width:860px){ .main-grid{grid-template-columns:1fr;} }
+
+  /* ─── LEFT PANEL ─── */
+  .panel {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:24px; padding:28px; backdrop-filter:blur(20px);
+  }
+  .panel-title {
+    font-family:'Syne',sans-serif; font-size:13px; font-weight:700;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--dim);
+    margin-bottom:16px;
+  }
+
+  /* MULTI-TAG SELECTOR */
+  .tag-section { margin-bottom:24px; }
+  .tag-section-label {
+    font-size:12px; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase;
+    margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .tag-section-label span {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:999px; padding:2px 10px; font-size:11px; color:var(--violet2);
+  }
+  .tags-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .tag {
+    cursor:pointer; border:1px solid var(--border);
+    border-radius:999px; padding:7px 16px; font-size:13px; color:var(--muted);
+    background:var(--surface); transition:all .22s; display:flex; align-items:center; gap:6px;
+    font-family:inherit;
+    user-select:none;
+  }
+  .tag:hover { border-color:var(--border2); color:var(--text); transform:translateY(-1px); }
+  .tag.active {
+    border-color:var(--violet); color:#fff; font-weight:500;
+    background:rgba(124,58,237,0.2);
+    box-shadow: 0 0 12px rgba(124,58,237,0.2);
+  }
+  .tag.active.t-dark { border-color:#1e3a5f; background:rgba(6,182,212,0.15); box-shadow:0 0 12px rgba(6,182,212,0.15); }
+  .tag.active.t-playful { border-color:#be185d; background:rgba(236,72,153,0.15); box-shadow:0 0 12px rgba(236,72,153,0.15); }
+  .tag.active.t-luxury { border-color:#b45309; background:rgba(245,158,11,0.12); }
+  .tag.active.t-minimal { border-color:var(--dim); background:rgba(255,255,255,0.06); }
+  .tag.active.t-nature { border-color:#15803d; background:rgba(34,197,94,0.12); }
+  .tag.active.t-retro { border-color:#9a3412; background:rgba(239,68,68,0.12); }
+
+  /* COMPLEXITY & MOOD */
+  .toggle-group { display:flex; gap:6px; margin-bottom:20px; }
+  .tgl {
+    flex:1; padding:9px 8px; font-size:13px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); transition:all .2s; font-family:inherit; text-align:center;
+  }
+  .tgl:hover { background:var(--surface2); color:var(--text); }
+  .tgl.active {
+    background:linear-gradient(135deg,#7c3aed,#ec4899);
+    border-color:transparent; color:#fff; font-weight:500;
+  }
+
+  /* PROMPT OUTPUT */
+  .prompt-output-box {
+    background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:16px; padding:22px; margin-bottom:16px; position:relative;
+    min-height:160px;
+  }
+  .prompt-output-label {
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim); margin-bottom:12px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .style-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip {
+    padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500;
+  }
+  .chip-violet { background:rgba(124,58,237,0.2); color:#c4b5fd; border:1px solid rgba(124,58,237,0.3); }
+  .chip-pink { background:rgba(236,72,153,0.2); color:#f9a8d4; border:1px solid rgba(236,72,153,0.3); }
+  .chip-cyan { background:rgba(6,182,212,0.2); color:#67e8f9; border:1px solid rgba(6,182,212,0.3); }
+  .chip-amber { background:rgba(245,158,11,0.2); color:#fcd34d; border:1px solid rgba(245,158,11,0.3); }
+  .chip-green { background:rgba(34,197,94,0.2); color:#86efac; border:1px solid rgba(34,197,94,0.3); }
+  .chip-red { background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid rgba(239,68,68,0.3); }
+  .chip-gray { background:rgba(255,255,255,0.08); color:var(--muted); border:1px solid var(--border); }
+
+  /* EDITABLE PROMPT TEXTAREA */
+  .prompt-textarea {
+    width:100%; background:transparent; border:none; outline:none;
+    color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px;
+    font-weight:300; line-height:1.85; resize:none; min-height:130px;
+    transition:opacity .3s;
+  }
+  .prompt-textarea::placeholder { color:var(--dim); }
+  .prompt-textarea.fading { opacity:0; }
+
+  /* EDIT TOOLBAR */
+  .edit-bar {
+    display:flex; align-items:center; gap:8px; padding:10px 0 2px;
+    border-top:1px solid var(--border); margin-top:12px;
+  }
+  .edit-label { font-size:12px; color:var(--dim); flex:1; }
+  .edit-btn {
+    padding:6px 14px; font-size:12px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface); color:var(--muted);
+    font-family:inherit; transition:all .2s;
+  }
+  .edit-btn:hover { background:var(--surface2); color:var(--text); }
+  .edit-btn.danger { color:var(--red); border-color:rgba(239,68,68,0.3); }
+  .edit-btn.danger:hover { background:rgba(239,68,68,0.1); }
+  .char-count { font-size:11px; color:var(--dim); }
+
+  /* ACTION ROW */
+  .action-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn-gen {
+    flex:1; min-width:160px; padding:15px 24px; font-size:15px; font-weight:500;
+    background:linear-gradient(135deg,#7c3aed,#ec4899);
+    border:none; border-radius:14px; color:#fff; cursor:pointer; font-family:inherit;
+    transition:all .25s; position:relative; overflow:hidden;
+  }
+  .btn-gen:hover { transform:translateY(-2px); box-shadow:0 12px 36px rgba(124,58,237,0.4); }
+  .btn-gen:active { transform:translateY(0); }
+  .btn-gen .shine {
+    position:absolute; top:-50%; left:-75%; width:50%; height:200%;
+    background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.18),transparent 60%);
+    transform:skewX(-15deg); animation:shine 3s infinite;
+  }
+  @keyframes shine { 0%,100%{left:-75%} 50%{left:125%} }
+  .btn-icon {
+    padding:15px 18px; border-radius:14px; cursor:pointer; font-family:inherit;
+    border:1px solid var(--border2); background:var(--surface); color:var(--violet2);
+    font-size:16px; transition:all .2s;
+  }
+  .btn-icon:hover { background:var(--surface2); transform:translateY(-2px); }
+  .btn-icon.copied { background:rgba(34,197,94,0.15); border-color:var(--green); color:var(--green); }
+
+  /* ─── RIGHT PANEL (SIDEBAR) ─── */
+  .sidebar { display:flex; flex-direction:column; gap:16px; }
+
+  /* PRO CARD */
+  .pro-card {
+    border-radius:20px; padding:24px; position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#1a0a3e 0%,#2d0a28 50%,#1a1500 100%);
+    border:1px solid rgba(124,58,237,0.35);
+  }
+  .pro-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 80% 20%,rgba(236,72,153,0.15),transparent 60%);
+    pointer-events:none;
+  }
+  .pro-crown { font-size:32px; margin-bottom:12px; display:block; }
+  .pro-title {
+    font-family:'Syne',sans-serif; font-size:20px; font-weight:800;
+    background:linear-gradient(135deg,#fbbf24,#f472b6);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    margin-bottom:8px;
+  }
+  .pro-desc { font-size:13px; color:#9d8fc0; line-height:1.65; margin-bottom:20px; }
+  .pro-perks { list-style:none; margin-bottom:22px; }
+  .pro-perks li {
+    font-size:13px; color:#c4b5fd; padding:5px 0;
+    display:flex; align-items:center; gap:8px;
+  }
+  .pro-perks li::before { content:'✦'; font-size:10px; color:#f59e0b; }
+  .price-row { display:flex; align-items:baseline; gap:6px; margin-bottom:16px; }
+  .price { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:#fbbf24; }
+  .price-period { font-size:14px; color:#7c5cbf; }
+  .price-old { font-size:13px; color:#4e4868; text-decoration:line-through; }
+  .btn-upgrade {
+    width:100%; padding:14px; font-size:15px; font-weight:500; border-radius:12px;
+    cursor:pointer; font-family:inherit; border:none;
+    background:linear-gradient(135deg,#f59e0b,#ec4899);
+    color:#fff; transition:all .25s;
+    box-shadow:0 4px 20px rgba(245,158,11,0.3);
+  }
+  .btn-upgrade:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(245,158,11,0.4); }
+  .btn-upgrade-secondary {
+    width:100%; padding:11px; font-size:13px; border-radius:12px; cursor:pointer;
+    font-family:inherit; margin-top:8px;
+    border:1px solid rgba(255,255,255,0.1); background:transparent;
+    color:var(--muted); transition:all .2s;
+  }
+  .btn-upgrade-secondary:hover { background:var(--surface2); color:var(--text); }
+
+  /* USAGE METER */
+  .usage-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; }
+  .usage-label { font-size:12px; color:var(--muted); margin-bottom:10px; display:flex; justify-content:space-between; }
+  .usage-bar-bg { background:rgba(255,255,255,0.06); border-radius:999px; height:6px; margin-bottom:8px; }
+  .usage-bar { height:6px; border-radius:999px; background:linear-gradient(90deg,#7c3aed,#ec4899); transition:width .5s ease; }
+  .usage-note { font-size:11px; color:var(--dim); }
+
+  /* QUICK INSPO */
+  .inspo-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px;
+  }
+  .inspo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .inspo-tile {
+    border-radius:12px; padding:14px 12px; cursor:pointer;
+    border:1px solid var(--border); transition:all .2s; text-align:center;
+  }
+  .inspo-tile:hover { transform:translateY(-2px); border-color:var(--border2); }
+  .it-v { background:rgba(124,58,237,0.08); }
+  .it-v:hover { background:rgba(124,58,237,0.16); }
+  .it-p { background:rgba(236,72,153,0.08); }
+  .it-p:hover { background:rgba(236,72,153,0.16); }
+  .it-c { background:rgba(6,182,212,0.08); }
+  .it-c:hover { background:rgba(6,182,212,0.16); }
+  .it-a { background:rgba(245,158,11,0.08); }
+  .it-a:hover { background:rgba(245,158,11,0.16); }
+  .inspo-tile-icon { font-size:22px; margin-bottom:6px; display:block; }
+  .inspo-tile-label { font-size:12px; color:var(--muted); }
+
+  /* AD BANNER (MONETISE) */
+  .ad-banner {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:16px; text-align:center; font-size:12px; color:var(--dim);
+    position:relative; overflow:hidden;
+  }
+  .ad-banner::before {
+    content:'AD'; position:absolute; top:8px; right:10px;
+    font-size:9px; color:var(--dim); letter-spacing:0.08em;
+  }
+  .ad-inner {
+    background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));
+    border-radius:10px; padding:14px;
+  }
+  .ad-pretitle { font-size:10px; color:var(--violet2); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:6px; }
+  .ad-headline { font-size:15px; font-weight:500; color:var(--text); margin-bottom:8px; }
+  .ad-cta {
+    display:inline-block; padding:8px 20px; border-radius:999px; font-size:12px;
+    background:linear-gradient(135deg,#7c3aed,#ec4899); color:#fff;
+    cursor:pointer; border:none; font-family:inherit; transition:all .2s;
+  }
+  .ad-cta:hover { transform:translateY(-1px); }
+
+  /* ─── FEATURES SECTION ─── */
+  .features { padding:72px 0; }
+  .section-head { text-align:center; margin-bottom:52px; }
+  .section-kicker {
+    display:inline-block; font-size:12px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--violet2); background:rgba(124,58,237,0.12); border:1px solid rgba(124,58,237,0.25);
+    border-radius:999px; padding:6px 18px; margin-bottom:18px;
+  }
+  .section-title {
+    font-family:'Syne',sans-serif; font-size:clamp(1.8rem,3.5vw,2.8rem); font-weight:800;
+    letter-spacing:-0.02em; margin-bottom:14px;
+  }
+  .section-sub { font-size:16px; color:var(--muted); font-weight:300; max-width:480px; margin:0 auto; line-height:1.7; }
+  .feat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; }
+  .feat-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:28px; transition:all .3s;
+    position:relative; overflow:hidden;
+  }
+  .feat-card:hover { border-color:var(--border2); transform:translateY(-4px); }
+  .feat-icon {
+    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; margin-bottom:18px;
+  }
+  .fi-v { background:rgba(124,58,237,0.15); }
+  .fi-p { background:rgba(236,72,153,0.15); }
+  .fi-c { background:rgba(6,182,212,0.15); }
+  .fi-a { background:rgba(245,158,11,0.15); }
+  .fi-g { background:rgba(34,197,94,0.15); }
+  .fi-r { background:rgba(239,68,68,0.15); }
+  .feat-name { font-family:'Syne',sans-serif; font-size:17px; font-weight:700; margin-bottom:8px; }
+  .feat-desc { font-size:14px; color:var(--muted); line-height:1.65; font-weight:300; }
+  .feat-badge {
+    position:absolute; top:18px; right:18px; padding:4px 12px; border-radius:999px;
+    font-size:11px; font-weight:500;
+    background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.25);
+  }
+
+  /* ─── PRICING ─── */
+  .pricing { padding:72px 0; }
+  .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; max-width:900px; margin:0 auto; }
+  .plan-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:24px;
+    padding:32px; transition:all .3s; position:relative; overflow:hidden;
+  }
+  .plan-card.featured {
+    border-color:rgba(124,58,237,0.5);
+    background:linear-gradient(160deg,rgba(124,58,237,0.08),rgba(236,72,153,0.05));
+    box-shadow:0 0 40px rgba(124,58,237,0.12);
+  }
+  .plan-popular {
+    position:absolute; top:0; right:28px;
+    background:linear-gradient(135deg,#7c3aed,#ec4899);
+    color:#fff; font-size:11px; font-weight:500; letter-spacing:0.06em; text-transform:uppercase;
+    padding:6px 16px; border-radius:0 0 10px 10px;
+  }
+  .plan-name { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:16px; }
+  .plan-price { font-family:'Syne',sans-serif; font-size:44px; font-weight:900; margin-bottom:4px; }
+  .pp-free { color:var(--text); }
+  .pp-pro { background:linear-gradient(135deg,#fbbf24,#f472b6); -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .pp-biz { background:linear-gradient(135deg,#06b6d4,#7c3aed); -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  .plan-period { font-size:14px; color:var(--muted); margin-bottom:24px; }
+  .plan-features { list-style:none; margin-bottom:28px; }
+  .plan-features li { font-size:14px; color:var(--muted); padding:7px 0; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
+  .plan-features li:last-child { border-bottom:none; }
+  .pf-check { color:var(--green); font-size:14px; }
+  .pf-x { color:var(--dim); font-size:14px; }
+  .pf-pro { color:var(--violet2); }
+  .btn-plan {
+    width:100%; padding:14px; border-radius:12px; cursor:pointer; font-family:inherit; font-size:15px; font-weight:500;
+    transition:all .25s; border:none;
+  }
+  .bp-free { background:var(--surface2); border:1px solid var(--border2); color:var(--text); }
+  .bp-free:hover { background:rgba(255,255,255,0.1); }
+  .bp-pro { background:linear-gradient(135deg,#7c3aed,#ec4899); color:#fff; box-shadow:0 4px 20px rgba(124,58,237,0.3); }
+  .bp-pro:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(124,58,237,0.4); }
+  .bp-biz { background:linear-gradient(135deg,#06b6d4,#7c3aed); color:#fff; }
+  .bp-biz:hover { transform:translateY(-2px); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top:1px solid var(--border); padding:40px 0;
+    background:rgba(0,0,0,0.2);
+  }
+  .footer-inner { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+  .footer-copy { font-size:13px; color:var(--dim); }
+  .footer-links { display:flex; gap:20px; }
+  .footer-links a { font-size:13px; color:var(--muted); text-decoration:none; transition:color .2s; }
+  .footer-links a:hover { color:var(--text); }
+
+  /* ─── MODAL (PAYWALL) ─── */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; z-index:999;
+    background:rgba(0,0,0,0.75); backdrop-filter:blur(12px);
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:#0f1020; border:1px solid rgba(124,58,237,0.4);
+    border-radius:28px; padding:40px; max-width:480px; width:100%;
+    position:relative; animation:popIn .3s ease both;
+  }
+  @keyframes popIn { from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);} }
+  .modal-close {
+    position:absolute; top:18px; right:20px; background:none; border:none;
+    color:var(--muted); font-size:22px; cursor:pointer; line-height:1;
+  }
+  .modal-icon { font-size:48px; margin-bottom:16px; display:block; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; margin-bottom:10px; }
+  .modal-desc { font-size:15px; color:var(--muted); line-height:1.7; margin-bottom:28px; font-weight:300; }
+  .modal-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .modal-plan {
+    border:1px solid var(--border); border-radius:16px; padding:18px; cursor:pointer;
+    transition:all .2s; text-align:center;
+  }
+  .modal-plan:hover { border-color:var(--border2); background:var(--surface); }
+  .modal-plan.selected { border-color:var(--violet); background:rgba(124,58,237,0.12); }
+  .mp-price { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:#fbbf24; }
+  .mp-label { font-size:12px; color:var(--muted); margin-top:4px; }
+  .mp-save { font-size:11px; color:var(--green); margin-top:3px; }
+  .btn-modal-cta {
+    width:100%; padding:16px; font-size:16px; font-weight:500; border-radius:14px;
+    cursor:pointer; font-family:inherit; border:none;
+    background:linear-gradient(135deg,#f59e0b,#ec4899);
+    color:#fff; transition:all .25s;
+    box-shadow:0 4px 24px rgba(245,158,11,0.3);
+  }
+  .btn-modal-cta:hover { transform:translateY(-2px); }
+  .modal-footer { text-align:center; font-size:12px; color:var(--dim); margin-top:14px; }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:28px; right:28px; z-index:9999;
+    background:#1a1a2e; border:1px solid rgba(124,58,237,0.4); border-radius:12px;
+    padding:14px 22px; font-size:14px; color:var(--text);
+    transform:translateY(80px); opacity:0; transition:all .3s ease;
+    display:flex; align-items:center; gap:10px;
+  }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast-icon { font-size:18px; }
+
+  /* ANIMATIONS */
+  .fade-in { animation:riseIn .5s ease both; }
+  .delay-1 { animation-delay:.1s; }
+  .delay-2 { animation-delay:.2s; }
+  .delay-3 { animation-delay:.3s; }
+  .delay-4 { animation-delay:.4s; }
+  .delay-5 { animation-delay:.5s; }
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<div class="canvas">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+  <div class="orb o4"></div>
+</div>
+<div class="noise"></div>
+
+<!-- NAV -->
+<header>
+  <nav>
+    <a href="#" class="logo">Prompt<span>Craft</span></a>
+    <div class="nav-links">
+      <button class="nav-link" onclick="scrollTo('#features')">Features</button>
+      <button class="nav-link" onclick="scrollTo('#pricing')">Pricing</button>
+      <button class="btn-pro" onclick="openModal()">✦ Go Pro</button>
+    </div>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="wrap">
+  <div class="hero fade-in">
+    <div class="badge-row">
+      <div class="badge"><div class="badge-dot"></div> AI-Powered Design Prompts</div>
+      <div class="badge badge-new">⚡ New: Mix Any Styles</div>
+    </div>
+    <h1>Generate. Mix. Edit.<br>Ship Beautiful Design.</h1>
+    <p class="hero-sub">Combine Dark + Playful, Luxury + Retro — any style mix you imagine. Edit prompts live. Copy and build.</p>
+    <div class="hero-stats">
+      <div class="hstat"><span class="hstat-num">120+</span><div class="hstat-label">Unique Prompts</div></div>
+      <div class="hstat"><span class="hstat-num">7</span><div class="hstat-label">Style Categories</div></div>
+      <div class="hstat"><span class="hstat-num">∞</span><div class="hstat-label">Style Combinations</div></div>
+      <div class="hstat"><span class="hstat-num">Free</span><div class="hstat-label">To Start</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN GENERATOR -->
+<section class="wrap">
+  <div class="main-grid">
+    <!-- LEFT: GENERATOR -->
+    <div>
+      <div class="panel fade-in delay-1">
+        <div class="panel-title">✦ Prompt Generator</div>
+
+        <!-- STYLE TAGS - MULTI SELECT -->
+        <div class="tag-section">
+          <div class="tag-section-label">
+            Style Vibe <span id="tagCount">0 selected</span>
+          </div>
+          <div class="tags-row">
+            <button class="tag t-luxury" data-tag="luxury" onclick="toggleTag(this)">💎 Luxury</button>
+            <button class="tag t-playful active" data-tag="playful" onclick="toggleTag(this)">🎨 Playful</button>
+            <button class="tag t-dark active" data-tag="dark" onclick="toggleTag(this)">🌙 Dark</button>
+            <button class="tag t-minimal" data-tag="minimal" onclick="toggleTag(this)">◻ Minimal</button>
+            <button class="tag t-retro" data-tag="retro" onclick="toggleTag(this)">📼 Retro</button>
+            <button class="tag t-nature" data-tag="nature" onclick="toggleTag(this)">🌿 Nature</button>
+          </div>
+        </div>
+
+        <!-- COMPLEXITY -->
+        <div class="panel-title" style="margin-top:4px;">Complexity</div>
+        <div class="toggle-group" id="complexityGroup">
+          <button class="tgl" onclick="setToggle('complexityGroup',this,'simple')">Simple</button>
+          <button class="tgl active" onclick="setToggle('complexityGroup',this,'detailed')">Detailed</button>
+          <button class="tgl" onclick="setToggle('complexityGroup',this,'expert')" data-pro>Expert ✦</button>
+        </div>
+
+        <!-- MOOD -->
+        <div class="panel-title">Mood</div>
+        <div class="toggle-group" id="moodGroup">
+          <button class="tgl active" onclick="setToggle('moodGroup',this,'light')">☀ Light</button>
+          <button class="tgl" onclick="setToggle('moodGroup',this,'dark')">🌙 Dark</button>
+          <button class="tgl" onclick="setToggle('moodGroup',this,'vibrant')" data-pro>⚡ Vibrant ✦</button>
+        </div>
+
+        <!-- PROMPT BOX -->
+        <div class="prompt-output-box">
+          <div class="prompt-output-label">
+            <span>Generated Prompt — editable ✏</span>
+            <div class="style-chips" id="styleChips"></div>
+          </div>
+          <textarea class="prompt-textarea" id="promptTA" placeholder="Click Generate to create a prompt…" spellcheck="false"></textarea>
+          <div class="edit-bar">
+            <span class="edit-label">✏ Edit freely — it's yours</span>
+            <span class="char-count" id="charCount">0 chars</span>
+            <button class="edit-btn" onclick="appendSuffix()">+ Add Detail</button>
+            <button class="edit-btn danger" onclick="clearPrompt()">Clear</button>
+          </div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="action-row">
+          <button class="btn-gen" onclick="generatePrompt()"><div class="shine"></div>✦ Generate Prompt</button>
+          <button class="btn-icon" id="copyBtn" onclick="copyPrompt()" title="Copy">📋</button>
+          <button class="btn-icon" onclick="shufflePrompt()" title="Shuffle">🔀</button>
+          <button class="btn-icon" onclick="exportPrompt()" title="Export TXT">💾</button>
+        </div>
+      </div>
+
+      <!-- USAGE METER (free tier) -->
+      <div class="usage-card fade-in delay-2" style="margin-top:16px;" id="usageMeter">
+        <div class="usage-label">
+          <span>Free Prompts Used</span>
+          <span id="usageText">3 / 10 today</span>
+        </div>
+        <div class="usage-bar-bg">
+          <div class="usage-bar" id="usageBar" style="width:30%"></div>
+        </div>
+        <div class="usage-note">Upgrade to Pro for unlimited prompts + export + API access</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- PRO CARD -->
+      <div class="pro-card fade-in delay-2">
+        <span class="pro-crown">👑</span>
+        <div class="pro-title">PromptCraft Pro</div>
+        <p class="pro-desc">Unlock unlimited prompts, all style combos, expert tier, API access & remove ads.</p>
+        <ul class="pro-perks">
+          <li>Unlimited prompt generations</li>
+          <li>Expert complexity tier</li>
+          <li>Vibrant mood + custom moods</li>
+          <li>Bulk export (TXT, JSON, PDF)</li>
+          <li>API access for your apps</li>
+          <li>No ads, ever</li>
+        </ul>
+        <div class="price-row">
+          <div class="price">$7</div>
+          <div class="price-period">/ month</div>
+          <div class="price-old">$19</div>
+        </div>
+        <button class="btn-upgrade" onclick="openModal()">✦ Upgrade to Pro</button>
+        <button class="btn-upgrade-secondary" onclick="openModal()">View all plans →</button>
+      </div>
+
+      <!-- QUICK INSPO -->
+      <div class="inspo-card fade-in delay-3">
+        <div class="panel-title">Quick Vibe</div>
+        <div class="inspo-grid">
+          <div class="inspo-tile it-v" onclick="quickVibe(['luxury','dark'])">
+            <span class="inspo-tile-icon">🌑</span>
+            <div class="inspo-tile-label">Dark Luxury</div>
+          </div>
+          <div class="inspo-tile it-p" onclick="quickVibe(['playful','retro'])">
+            <span class="inspo-tile-icon">🎪</span>
+            <div class="inspo-tile-label">Retro Fun</div>
+          </div>
+          <div class="inspo-tile it-c" onclick="quickVibe(['minimal','nature'])">
+            <span class="inspo-tile-icon">🌿</span>
+            <div class="inspo-tile-label">Zen Nature</div>
+          </div>
+          <div class="inspo-tile it-a" onclick="quickVibe(['playful','dark','retro'])">
+            <span class="inspo-tile-icon">⚡</span>
+            <div class="inspo-tile-label">Neon Chaos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPONSORED AD (MONETISATION) -->
+      <div class="ad-banner fade-in delay-4">
+        <div class="ad-inner">
+          <div class="ad-pretitle">Sponsored</div>
+          <div class="ad-headline">Build your AI tool — no code</div>
+          <div style="font-size:12px;color:#7c5cbf;margin-bottom:12px;">Turn your prompts into a SaaS with Bubble.io</div>
+          <button class="ad-cta" onclick="showToast('Opening sponsor link…','🔗')">Try Free →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="section-head fade-in">
+      <div class="section-kicker">Why PromptCraft</div>
+      <h2 class="section-title">Everything you need to design faster</h2>
+      <p class="section-sub">From quick one-liners to expert briefs with design tokens — we've got every tier covered.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card fade-in delay-1">
+        <div class="feat-icon fi-v">🎨</div>
+        <div class="feat-name">Multi-Style Mixing</div>
+        <p class="feat-desc">Select Dark + Playful + Retro simultaneously. The engine blends them into one cohesive, creative prompt.</p>
+      </div>
+      <div class="feat-card fade-in delay-2">
+        <div class="feat-icon fi-p">✏</div>
+        <div class="feat-name">Live Editable Prompts</div>
+        <p class="feat-desc">Every generated prompt is fully editable in-place. Tweak, rewrite, or add your own details freely.</p>
+      </div>
+      <div class="feat-card fade-in delay-3">
+        <div class="feat-badge">PRO</div>
+        <div class="feat-icon fi-c">⚡</div>
+        <div class="feat-name">Expert Tier</div>
+        <p class="feat-desc">Get prompts with design token systems, CSS Houdini specs, WCAG constraints, and modular type scales.</p>
+      </div>
+      <div class="feat-card fade-in delay-4">
+        <div class="feat-badge">PRO</div>
+        <div class="feat-icon fi-a">💾</div>
+        <div class="feat-name">Bulk Export</div>
+        <p class="feat-desc">Export your prompts as TXT, JSON, or PDF. Build prompt packs to sell or use in your workflow.</p>
+      </div>
+      <div class="feat-card fade-in delay-5">
+        <div class="feat-badge">PRO</div>
+        <div class="feat-icon fi-g">🔌</div>
+        <div class="feat-name">API Access</div>
+        <p class="feat-desc">Integrate PromptCraft into your own tools via a simple REST API. Build prompt-powered products.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon fi-r">🚫</div>
+        <div class="feat-name">No Ads for Pro</div>
+        <p class="feat-desc">Free tier is ad-supported. Pro users get a completely clean, distraction-free experience forever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="section-head fade-in">
+      <div class="section-kicker">Simple Pricing</div>
+      <h2 class="section-title">Start free. Scale when ready.</h2>
+      <p class="section-sub">No hidden fees. Cancel anytime. Built for designers, developers, and indie hackers.</p>
+    </div>
+    <div class="pricing-grid">
+      <!-- FREE -->
+      <div class="plan-card fade-in delay-1">
+        <div class="plan-name">Free</div>
+        <div class="plan-price pp-free">$0</div>
+        <div class="plan-period">forever</div>
+        <ul class="plan-features">
+          <li><span class="pf-check">✓</span> 10 prompts/day</li>
+          <li><span class="pf-check">✓</span> 6 style categories</li>
+          <li><span class="pf-check">✓</span> Multi-style mixing</li>
+          <li><span class="pf-check">✓</span> Editable prompts</li>
+          <li><span class="pf-check">✓</span> Copy to clipboard</li>
+          <li><span class="pf-x">✗</span> Expert complexity</li>
+          <li><span class="pf-x">✗</span> Bulk export</li>
+          <li><span class="pf-x">✗</span> API access</li>
+        </ul>
+        <button class="btn-plan bp-free">Get Started Free</button>
+      </div>
+      <!-- PRO -->
+      <div class="plan-card featured fade-in delay-2">
+        <div class="plan-popular">Most Popular</div>
+        <div class="plan-name" style="color:var(--violet2);">Pro</div>
+        <div class="plan-price pp-pro">$7</div>
+        <div class="plan-period">per month · billed monthly</div>
+        <ul class="plan-features">
+          <li><span class="pf-check">✓</span> <b>Unlimited</b> prompts</li>
+          <li><span class="pf-check">✓</span> All style categories</li>
+          <li><span class="pf-check">✓</span> Expert complexity tier</li>
+          <li><span class="pf-check">✓</span> Vibrant + custom moods</li>
+          <li><span class="pf-check">✓</span> Bulk export (TXT/JSON/PDF)</li>
+          <li><span class="pf-check">✓</span> API access (1000 req/mo)</li>
+          <li><span class="pf-check">✓</span> No ads</li>
+          <li><span class="pf-check">✓</span> Priority support</li>
+        </ul>
+        <button class="btn-plan bp-pro" onclick="openModal()">✦ Start Pro — $7/mo</button>
+      </div>
+      <!-- BUSINESS -->
+      <div class="plan-card fade-in delay-3">
+        <div class="plan-name">Business</div>
+        <div class="plan-price pp-biz">$29</div>
+        <div class="plan-period">per month · up to 5 seats</div>
+        <ul class="plan-features">
+          <li><span class="pf-check">✓</span> Everything in Pro</li>
+          <li><span class="pf-check">✓</span> 5 team seats</li>
+          <li><span class="pf-check">✓</span> Unlimited API access</li>
+          <li><span class="pf-check">✓</span> White-label prompts</li>
+          <li><span class="pf-check">✓</span> Custom style packs</li>
+          <li><span class="pf-check">✓</span> Dedicated Slack support</li>
+          <li><span class="pf-check">✓</span> Invoice billing</li>
+          <li><span class="pf-check">✓</span> SLA guarantee</li>
+        </ul>
+        <button class="btn-plan bp-biz" onclick="openModal()">Contact Sales</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div>
+        <a href="#" class="logo" style="font-size:18px;">Prompt<span>Craft</span></a>
+        <div class="footer-copy" style="margin-top:6px;">© 2025 PromptCraft. Built for designers, by designers.</div>
+      </div>
+      <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">API Docs</a>
+        <a href="#">Affiliates</a>
+        <a href="#" onclick="openModal()">Upgrade</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- PAYWALL MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <span class="modal-icon">👑</span>
+    <div class="modal-title">Unlock PromptCraft Pro</div>
+    <p class="modal-desc">Get unlimited prompts, expert tier, bulk export, API access, and a fully ad-free experience.</p>
+    <div class="modal-options">
+      <div class="modal-plan selected" onclick="selectPlan(this,'monthly')">
+        <div class="mp-price">$7</div>
+        <div class="mp-label">Per month</div>
+        <div class="mp-save">Billed monthly</div>
+      </div>
+      <div class="modal-plan" onclick="selectPlan(this,'yearly')">
+        <div class="mp-price">$49</div>
+        <div class="mp-label">Per year</div>
+        <div class="mp-save">💚 Save 41%</div>
+      </div>
+    </div>
+    <button class="btn-modal-cta" onclick="handleCheckout()">✦ Start Pro — 7-day free trial</button>
+    <div class="modal-footer">No credit card required for trial · Cancel anytime · Instant access</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const PROMPTS = {
+  luxury: [
+    "Design a luxury watch brand homepage with a cinematic full-viewport hero — slow-motion footage of a watch mechanism overlaid with a hairline-thin serif logotype in aged ivory. Navigation is invisible until cursor hover. Scroll reveals each collection piece via vertical parallax. Typography: classic Cormorant Garamond for headlines, light Helvetica Neue for body. Palette: near-black #0D0D0D, aged ivory #F5F0E8, burnished gold #C9A96E. Hover on product cards triggers a soft metallic sheen animation.",
+    "Create a high-fashion editorial website with a strict Swiss grid of full-bleed photography. Font: Didot-style serif headlines at 80px, razor-thin weight. Navigation sits at the extreme left as a vertical sidebar. Palette: monochromatic ivory and coal — colour only in photography. Page transitions are sharp cross-fades at 180ms. Product pages reveal with a slow zoom-in image and text rising from below.",
+    "Build a luxury real-estate site with a split-screen hero: one half a cinematic drone shot, the other a massive Garamond headline. Subtle parallax on scroll, each property listed as an oversized card with a grain overlay. Palette: alabaster #F2EDE4, espresso #1A0F07, champagne #D4AF78. CTA button is a 1px-outlined ghost that fills on hover with a 300ms ease.",
+  ],
+  playful: [
+    "Design a colorful children's education platform with a maximalist, joyful aesthetic. Background: warm cream with animated pastel blob shapes drifting slowly. Nav features cartoon-style icons with a bounce hover. Typography: rounded chunky Nunito at large sizes in purple and coral. Cards have thick 3px colored borders and lift with a playful shadow on hover. Color palette: sunny yellow #FFD60A, sky blue #4CC9F0, coral #FF6B6B, lime green #80ED99.",
+    "Build a Gen-Z wellness app landing page bursting with color and motion. Hero has oversized emoji-style SVG illustrations floating with CSS keyframes. Font: bouncy variable display headline + clean geometric sans body. Palette: electric lavender #B5A3FF, hot coral #FF6060, acid green #C1FF72 on near-white. Micro-interactions everywhere — buttons squish on click, icons wiggle on focus, background blobs react to cursor.",
+    "Design a quirky creative agency site that breaks every grid rule. Oversized text at 15vw bleeds off-screen. Navigation items scattered across the viewport in absolute positions, each rotating ±3° randomly. Color palette: electric yellow #F5E642, deep purple #1A0140, hot pink #FF2D6E, clean white. Sections separated by hand-drawn SVG dividers. Mouse cursor replaced with a custom glowing circle.",
+  ],
+  dark: [
+    "Design a dark-mode SaaS dashboard landing with a deep space atmosphere. Background #080B14 with faint star-speckle noise. Hero shows a glowing dashboard screenshot with a radial light bloom in electric blue behind it. Typography: clean geometric sans, white headlines, medium-gray body. Cards glow faintly — 1px border in #1E2A45 with subtle blue inner glow on hover. CTA: gradient violet-to-electric-blue with a bright pulse on click.",
+    "Build a cyberpunk developer-tool homepage. Matte black background, monospace code snippets animate in as if typed. Headline: bold condensed sans 96px pure white with a single neon green #00FF87 word for emphasis. Navigation uses terminal cursor blink. Cards have thin 1px neon borders that illuminate on hover. Diagonal hairline grid in the background at 2% opacity. CTA outlined neon green with fill-sweep on hover.",
+    "Create a dark gothic portfolio for a digital artist. Background #050508 with a deep purple vignette. Full-viewport hero with generative SVG ink-splatter animation. Typeface: a dramatic blackletter display font for names, clean mono for descriptions. Palette: void black, midnight plum #2D0A4E, blood crimson #8B0000, and an occasional flash of ice white. Section transitions use a curtain-wipe with a 0.6s ease.",
+  ],
+  minimal: [
+    "Design an ultra-minimal portfolio for an architect. Pure white #FFFFFF, single typeface Neue Haas Grotesk across all weights. Strict 12-column Swiss grid. Navigation: single text line top-right. Project images black-and-white at uniform 4:3. Zero decorative elements. Only accent: graphite #2D2D2D on hover. Interactions: imperceptible 100ms opacity transitions.",
+    "Create a Zen meditation app landing page. Vast white space, single serif headline 96px in warm dark brown, centred at two-thirds viewport height. Three generous paragraphs in 18px light. Only visual element: a hand-drawn circle SVG rotating slowly at 0.02rpm. CTA is text-only with an underline that draws left-to-right on hover. No photography, no illustrations — pure typographic calm.",
+  ],
+  retro: [
+    "Design a retro-futuristic 80s synthwave landing. Background deep midnight purple #0D0221 with a perspective grid floor glowing magenta. Hero: chrome 3D lettering with sunset gradient. Font: Exocet-style display, monospace body. Colours: hot pink #FF2D9B, electric blue #00F5FF, neon yellow #FFE600. Scan lines at 2% opacity over the whole page. Section dividers: dotted pink horizontal rules with a CRT flicker.",
+    "Build a warm vintage-magazine site for an artisan coffee brand. Cream paper texture #F4ECD8 with subtle noise. Typography: expressive 1950s slab serif for headlines, humanist sans for body. Editorial layout with irregular grid — some images bleed to edge, text wraps around photos. Palette: espresso #3B1F0E, terracotta #C1603B, cream, dusty mustard #D4A843. Aged photo filters on all imagery.",
+  ],
+  nature: [
+    "Design an organic wellness brand inspired by forest bathing. Palette: moss green #4A6741, clay #9E6B4A, fog white #F0EDE7. Subtle linen texture on background. Full-viewport photography of hands, soil, golden-hour leaves. Typography: flowing script for display, humanist sans for body. Sections dissolve gently. Fine-line botanical SVG accents between sections. A sound toggle plays ambient forest audio.",
+    "Create a sustainable architecture firm site with biophilic aesthetic. Split-screen hero: lush living wall left, studio name in oversized Garamond right. Nav matches foliage green. Sections alternate cream and pale sage. Environmental impact charts in hand-drawn sketch style. All photography exterior, daylit. Palette: sage #7DAA8A, warm white, slate #5C6B73, terracotta.",
+  ],
+};
+
+const BLENDS = {
+  'dark+playful': "Design a neon-drenched dark interface with playful soul — think arcade-cabinet energy meets brutalist web. Background #0A0A0F with electric blob shapes in deep fuchsia and lime that drift and bounce. Typography: oversized chunky display font in neon pink #FF2D9B, body in clean mono. Cards are chunky with 2px glowing borders that pulse. Cursor leaves a colorful trailing particle effect. Palette: void black, hot pink, acid green #C1FF72, electric yellow. Interactions are over-the-top — buttons jiggle, icons spin, hover states are maximalist.",
+  'luxury+dark': "Design a dark luxury brand site of absolute refinement. Background near-void #080608 with a barely perceptible radial gradient in deep violet. Full-bleed hero with a single product photographed on black velvet. Typography: ultra-thin Bodoni serif at 96px, letter-spacing 0.2em, in aged gold #C9A96E. Navigation: invisible, revealed only on scroll-up. Cards: perfectly dark with a 0.5px gold border and a whisper-thin shimmer on hover. Zero clutter — every pixel deliberate.",
+  'playful+retro': "Build a retro-arcade-inspired fun site with chunky pixels and maximalist joy. Background: deep navy #0A0E2A with a scanline texture and a pixelated star-field. Typography: a bold pixel-art display font for headlines, a retro bitmap font for body. Colors: candy red #FF3860, electric yellow #FFE600, arcade green #39FF14. Navigation looks like a Game Boy menu. Hover states add a coin-collect sound icon animation. Section separators are pixel-art platform floors.",
+  'minimal+nature': "Design a pristine Zen garden-inspired site. Extremely generous white space, a warm off-white #FAFAF7 background with the faintest watercolour wash of sage green. Single typeface: a delicate humanist serif. Only imagery: one large hand-painted botanical illustration, full viewport. Navigation: three words, far right, small and light. A subtle horizontal scroll on mobile reveals additional content. Every element has room to breathe — the silence is the design.",
+  'dark+retro': "Create a grimy lo-fi cassette-punk website. Background: textured near-black with VHS-style chromatic aberration on hover states. Typography: a condensed serif for headlines printed with an off-register slight blur, typewriter mono for body. Palette: washed-out sepia #8B7355, faded magenta #C44569, static white #E8E8E8. Navigation mimics a physical tape deck. Section dividers are horizontal tape-head scan animations. Overall tone: nostalgic, slightly broken, beautifully worn.",
+  'luxury+playful': "Design a couture fashion brand for Gen-Z — where editorial luxury meets irreverent fun. Alternating white and candy pink #FFB7C5 section backgrounds. Typography: oversized editorial serif headlines at 120px paired with a quirky rounded sans. Product cards have a luxury photography style but hover to reveal a playful animated emoji reaction. Navigation floats as a pill — clicking animates it with a satisfying squish. Palette: blush, cream, deep navy, and flashes of bright tangerine #FF6B35.",
+};
+
+const EXPERT_ADDON = " Define a complete design token system: spacing scale (4/8/12/16/24/32/48/64px), type scale at 1.333 ratio, and a semantic color layer over primitive ramps. Use CSS custom properties throughout. All animations should respect prefers-reduced-motion. Ensure WCAG 2.1 AA contrast on all text. Use CSS Houdini for animated gradient borders. Implement GPU-accelerated transitions with will-change: transform.";
+const SIMPLE_PROMPTS = [
+  "Design a colorful website with smooth scroll animations, pastel gradient hero, rounded cards, and a playful sans-serif font on white background.",
+  "Create a bold landing page with a vibrant gradient hero, glowing CTA button, hover animations, and a clean mobile-first layout.",
+  "Build a friendly app landing page with a bubbly illustration hero, soft color palette, and micro-interactions on all interactive elements.",
+];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+
+let activeTags = new Set(['playful','dark']);
+let complexity = 'detailed';
+let mood = 'light';
+let usageCount = 3;
+const FREE_LIMIT = 10;
+let isPro = false;
+let selectedPlan = 'monthly';
+
+// ─── TAG LOGIC ─────────────────────────────────────────────────────────────
+
+function toggleTag(el) {
+  const tag = el.dataset.tag;
+  if (activeTags.has(tag)) {
+    activeTags.delete(tag);
+    el.classList.remove('active');
+  } else {
+    activeTags.add(tag);
+    el.classList.add('active');
+  }
+  updateTagCount();
+}
+
+function updateTagCount() {
+  const n = activeTags.size;
+  document.getElementById('tagCount').textContent = n === 0 ? 'pick at least 1' : n + ' selected';
+}
+
+function quickVibe(tags) {
+  activeTags.clear();
+  document.querySelectorAll('.tag').forEach(t => {
+    t.classList.remove('active');
+    if (tags.includes(t.dataset.tag)) {
+      activeTags.add(t.dataset.tag);
+      t.classList.add('active');
+    }
+  });
+  updateTagCount();
+  generatePrompt();
+}
+
+// ─── TOGGLE HELPERS ────────────────────────────────────────────────────────
+
+function setToggle(groupId, el, val) {
+  const group = document.getElementById(groupId);
+  if (el.dataset.pro && !isPro) { openModal(); return; }
+  group.querySelectorAll('.tgl').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (groupId === 'complexityGroup') complexity = val;
+  if (groupId === 'moodGroup') mood = val;
+}
+
+// ─── GENERATE ──────────────────────────────────────────────────────────────
+
+function generatePrompt() {
+  if (!isPro && usageCount >= FREE_LIMIT) {
+    openModal();
+    showToast('Daily limit reached — upgrade to Pro!','⚡');
+    return;
+  }
+
+  const tags = Array.from(activeTags);
+  if (tags.length === 0) { showToast('Select at least one style tag!','⚠'); return; }
+
+  const ta = document.getElementById('promptTA');
+  ta.classList.add('fading');
+
+  setTimeout(() => {
+    let prompt = '';
+
+    if (complexity === 'simple') {
+      prompt = SIMPLE_PROMPTS[Math.floor(Math.random() * SIMPLE_PROMPTS.length)];
+    } else if (tags.length >= 2) {
+      // Try blend first
+      const key1 = tags[0]+'+'+tags[1];
+      const key2 = tags[1]+'+'+tags[0];
+      if (BLENDS[key1]) prompt = BLENDS[key1];
+      else if (BLENDS[key2]) prompt = BLENDS[key2];
+      else {
+        // Merge from both
+        const p1 = pick(PROMPTS[tags[0]] || PROMPTS.luxury);
+        const p2 = pick(PROMPTS[tags[1]] || PROMPTS.dark);
+        prompt = mergePrompts(p1, p2, tags);
+      }
+      if (tags.length >= 3) prompt += ' Further fuse elements of a ' + tags[2] + ' aesthetic — incorporate its key visual language into the colour palette and typography decisions.';
+    } else {
+      prompt = pick(PROMPTS[tags[0]] || PROMPTS.luxury);
+    }
+
+    if (complexity === 'expert') prompt += EXPERT_ADDON;
+    if (mood === 'dark' && !prompt.toLowerCase().includes('dark') && !prompt.includes('#0')) prompt += ' Adapt for dark mode: dark surface #0F0F13, elevated card layers, glowing accent tones.';
+    if (mood === 'vibrant') prompt += ' Push all colours to maximum saturation. Add a confetti particle background on load.';
+
+    ta.value = prompt;
+    ta.classList.remove('fading');
+    updateChips(tags);
+    updateCharCount();
+
+    // Auto-resize
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+
+    usageCount++;
+    updateUsage();
+  }, 280);
+}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function mergePrompts(p1, p2, tags) {
+  const sentences1 = p1.split('. ').slice(0,3).join('. ') + '.';
+  const sentences2 = p2.split('. ').slice(2).join('. ');
+  return `Design a ${tags.join(' + ')} fusion website. ${sentences1} Layer in elements from a ${tags[1]} aesthetic: ${sentences2}`;
+}
+
+function shufflePrompt() {
+  generatePrompt();
+}
+
+// ─── CHIPS ─────────────────────────────────────────────────────────────────
+
+const CHIP_COLORS = {
+  luxury:'chip-amber', playful:'chip-pink', dark:'chip-cyan',
+  minimal:'chip-gray', retro:'chip-red', nature:'chip-green'
+};
+
+function updateChips(tags) {
+  const container = document.getElementById('styleChips');
+  container.innerHTML = tags.map(t =>
+    `<span class="chip ${CHIP_COLORS[t]||'chip-gray'}">${t}</span>`
+  ).join('');
+}
+
+// ─── TEXTAREA ──────────────────────────────────────────────────────────────
+
+document.getElementById('promptTA').addEventListener('input', function() {
+  updateCharCount();
+  this.style.height = 'auto';
+  this.style.height = this.scrollHeight + 'px';
+});
+
+function updateCharCount() {
+  const len = document.getElementById('promptTA').value.length;
+  document.getElementById('charCount').textContent = len + ' chars';
+}
+
+function clearPrompt() {
+  document.getElementById('promptTA').value = '';
+  updateCharCount();
+}
+
+function appendSuffix() {
+  const ta = document.getElementById('promptTA');
+  const add = ' Add smooth page transitions, a custom cursor, and accessibility-first markup throughout.';
+  ta.value += add;
+  updateCharCount();
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+  ta.focus();
+}
+
+// ─── COPY / EXPORT ─────────────────────────────────────────────────────────
+
+function copyPrompt() {
+  const text = document.getElementById('promptTA').value;
+  if (!text) { showToast('Nothing to copy yet!','⚠'); return; }
+  navigator.clipboard.writeText(text).catch(()=>{});
+  const btn = document.getElementById('copyBtn');
+  btn.classList.add('copied');
+  btn.textContent = '✓';
+  setTimeout(()=>{ btn.classList.remove('copied'); btn.textContent='📋'; }, 2000);
+  showToast('Copied to clipboard!','✓');
+}
+
+function exportPrompt() {
+  if (!isPro) { openModal(); showToast('Export is a Pro feature!','✦'); return; }
+  const text = document.getElementById('promptTA').value;
+  if (!text) { showToast('Generate a prompt first!','⚠'); return; }
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'promptcraft-export.txt';
+  a.click();
+  showToast('Exported as TXT!','💾');
+}
+
+// ─── USAGE METER ───────────────────────────────────────────────────────────
+
+function updateUsage() {
+  if (isPro) {
+    document.getElementById('usageMeter').style.display = 'none';
+    return;
+  }
+  const pct = Math.min((usageCount / FREE_LIMIT) * 100, 100);
+  document.getElementById('usageBar').style.width = pct + '%';
+  document.getElementById('usageText').textContent = usageCount + ' / ' + FREE_LIMIT + ' today';
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────────────
+
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function selectPlan(el, plan) {
+  document.querySelectorAll('.modal-plan').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPlan = plan;
+  const cta = document.querySelector('.btn-modal-cta');
+  cta.textContent = plan === 'yearly' ? '✦ Start Pro — $49/yr (7-day free trial)' : '✦ Start Pro — 7-day free trial';
+}
+
+function handleCheckout() {
+  // In production: redirect to Stripe checkout
+  // e.g. window.location.href = 'https://buy.stripe.com/your_link';
+  showToast('Redirecting to secure checkout…','🔒');
+  closeModal();
+  setTimeout(()=>{
+    // Simulate pro activation for demo
+    isPro = true;
+    updateUsage();
+    showToast('🎉 Welcome to Pro! All features unlocked.','👑');
+  }, 1500);
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg, icon='✓') {
+  clearTimeout(toastTimer);
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = icon;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3000);
+}
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────
+
+function scrollTo(selector) {
+  const el = document.querySelector(selector);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+
+updateTagCount();
+updateUsage();
+// Pre-fill a prompt on load
+setTimeout(()=>{
+  const ta = document.getElementById('promptTA');
+  const tags = Array.from(activeTags);
+  const key = tags[0]+'+'+tags[1];
+  ta.value = BLENDS[key] || pick(PROMPTS[tags[0]]||PROMPTS.luxury);
+  updateChips(tags);
+  updateCharCount();
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}, 400);
+</script>
+</body>
+</html>
